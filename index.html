@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortune Rabbit - Multi-Linhas</title>
+    <style>
+        :root { --gold: #ffd700; --red: #b30000; }
+        body { background: #111; color: white; font-family: 'Arial Black', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        #app { width: 360px; height: 720px; background: linear-gradient(180deg, var(--red) 0%, #1a0101 100%); border: 4px solid var(--gold); border-radius: 30px; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
+
+        /* LOADING */
+        #loading { position: absolute; inset: 0; background: #1a0101; z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .bar { width: 70%; height: 12px; background: #333; border-radius: 10px; border: 1px solid var(--gold); margin: 15px; overflow: hidden; }
+        .fill { width: 0%; height: 100%; background: linear-gradient(90deg, #fff700, #ffae00); transition: width 0.1s; }
+
+        /* UI */
+        #ui { display: none; width: 100%; flex-direction: column; align-items: center; padding-top: 20px; }
+        .panel { background: rgba(0,0,0,0.8); width: 85%; padding: 8px; border-radius: 12px; border: 1px solid var(--gold); margin-bottom: 10px; text-align: center; }
+        input { background: none; border: none; color: white; font-size: 24px; font-weight: bold; text-align: center; width: 100%; outline: none; }
+        label { font-size: 10px; color: var(--gold); text-transform: uppercase; }
+
+        /* GRID 3x3 */
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 15px; border: 2px solid #500; }
+        .slot { width: 85px; height: 85px; background: white; border-radius: 10px; border: 3px solid var(--gold); display: flex; justify-content: center; align-items: center; font-size: 45px; }
+
+        /* ANIMATIONS */
+        .spin { animation: blur 0.1s infinite linear; }
+        @keyframes blur { 0% { filter: blur(4px); transform: scale(0.95); } 100% { filter: blur(8px); transform: scale(1.05); } }
+        .win { background: #fff700 !important; animation: pulse 0.3s infinite alternate; z-index: 10; border-color: white !important; }
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.1); box-shadow: 0 0 25px gold; } }
+
+        .btn { width: 85%; padding: 18px; margin-top: 25px; background: linear-gradient(180deg, #ffea00, #ff9100); border: none; border-radius: 50px; font-size: 24px; font-weight: bold; color: #500; cursor: pointer; box-shadow: 0 6px 0 #840; }
+        .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #840; }
+        #msg { margin-top: 15px; font-size: 22px; font-weight: bold; color: #0f0; text-shadow: 2px 2px #000; height: 60px; text-align: center; line-height: 1.2; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="loading">
+        <h2 style="color:var(--gold)">FORTUNE RABBIT</h2>
+        <div class="bar"><div class="fill" id="fill"></div></div>
+        <span id="pct">0%</span>
+    </div>
+
+    <div id="ui">
+        <div class="panel">
+            <label>Saldo (R$)</label>
+            <input type="number" id="balance" value="100.00">
+        </div>
+
+        <div class="panel" style="border-color: #00e5ff;">
+            <label style="color:#00e5ff">Aposta (R$)</label>
+            <input type="number" id="bet" value="2.00" step="0.50">
+        </div>
+
+        <div class="grid">
+            <div class="slot" id="s0">🐰</div><div class="slot" id="s1">🐰</div><div class="slot" id="s2">🐰</div>
+            <div class="slot" id="s3">🥕</div><div class="slot" id="s4">🥕</div><div class="slot" id="s5">🥕</div>
+            <div class="slot" id="s6">💰</div><div class="slot" id="s7">💰</div><div class="slot" id="s8">💰</div>
+        </div>
+
+        <button class="btn" onclick="girar()">GIRAR</button>
+        <div id="msg"></div>
+        
+        <div style="font-size: 10px; color: #aaa; margin-top: 10px; text-align: center;">
+            🐰x50 | 💰x20 | 🧧x10 | 🏮x5 | 🥕x3 <br>
+            (Linhas múltiplas ACUMULAM o prêmio!)
+        </div>
+    </div>
+</div>
+
+<script>
+    // Carregamento
+    let p = 0;
+    const l = setInterval(() => {
+        p += Math.random() * 15;
+        if(p >= 100) {
+            p = 100; clearInterval(l);
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('ui').style.display = 'flex';
+            }, 400);
+        }
+        document.getElementById('fill').style.width = p + '%';
+        document.getElementById('pct').innerText = Math.floor(p) + '%';
+    }, 80);
+
+    const tabela = { "🐰": 50, "💰": 20, "🧧": 10, "🏮": 5, "🥕": 3 };
+    const simbolos = Object.keys(tabela);
+    let ativo = false;
+
+    function girar() {
+        if(ativo) return;
+        const bIn = document.getElementById('balance');
+        const tIn = document.getElementById('bet');
+        let saldo = parseFloat(bIn.value);
+        let aposta = parseFloat(tIn.value);
+
+        if(saldo < aposta) {
+            document.getElementById('msg').innerText = "SEM SALDO!";
+            document.getElementById('msg').style.color = "red";
+            return;
+        }
+
+        ativo = true;
+        bIn.value = (saldo - aposta).toFixed(2);
+        document.getElementById('msg').innerText = "";
+
+        const slots = document.querySelectorAll('.slot');
+        slots.forEach(s => { s.classList.add('spin'); s.classList.remove('win'); });
+
+        setTimeout(() => {
+            let res = [];
+            slots.forEach(s => {
+                s.classList.remove('spin');
+                const sort = simbolos[Math.floor(Math.random() * simbolos.length)];
+                s.innerText = sort;
+                res.push(sort);
+            });
+            verificar(res, aposta);
+            ativo = false;
+        }, 1000);
+    }
+
+    function verificar(res, aposta) {
+        // Todas as 8 linhas possíveis de um 3x3
+        const combos = [
+            [0,1,2], [3,4,5], [6,7,8], // Horizontais
+            [0,3,6], [1,4,7], [2,5,8], // Verticais
+            [0,4,8], [2,4,6]           // Diagonais
+        ];
+
+        let linhasGanhas = 0;
+        let ganhoTotal = 0;
+
+        combos.forEach(c => {
+            if(res[c[0]] === res[c[1]] && res[c[1]] === res[c[2]]) {
+                linhasGanhas++;
+                c.forEach(i => document.getElementById('s'+i).classList.add('win'));
+                let mult = tabela[res[c[0]]];
+                ganhoTotal += aposta * mult;
+            }
+        });
+
+        if(linhasGanhas > 0) {
+            let s = parseFloat(document.getElementById('balance').value);
+            document.getElementById('balance').value = (s + ganhoTotal).toFixed(2);
+            
+            if(linhasGanhas > 1) {
+                document.getElementById('msg').innerHTML = `MEGA WIN! <br> ${linhasGanhas} LINHAS: R$ ${ganhoTotal.toFixed(2)}`;
+            } else {
+                document.getElementById('msg').innerText = "GANHOU R$ " + ganhoTotal.toFixed(2);
+            }
+            document.getElementById('msg').style.color = "#0f0";
+        } else {
+            document.getElementById('msg').innerText = "";
+        }
+    }
+</script>
+</body>
+</html>
+
